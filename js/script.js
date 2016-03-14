@@ -11,16 +11,30 @@ console.log("sketti time")//<---test to see if js is connected correctly.
 
 // extend the native Backbone with our etsy model constructor. this constructor adds a custom api key value, and assigns the api request url to the url attribute.
 
-var EtsyHomeModel = Backbone.Model.extend ({
-
+var EtsyModel = Backbone.Model.extend ({
+	defaults: {
+		description: "no description provided",
+	},
 	_apiKey: "4qbvpiz0vok42wn8xewnojn5",
-	url: "https://openapi.etsy.com/v2/listings/active.js?"
+	url: "",
+	_generate_URL: function(id) {
+		var fullURL = "https://openapi.etsy.com/v2/listings/" + id + ".js"
+		this.url = fullURL
+	},
+	parse: function(JSONData){
+		if (JSONData.data) return JSONData.data
+		else return JSONData	
+	}
 
 })
 
-var EtsyDetailModel = Backbone.Model.extend ({
-_apiKey: "4qbvpiz0vok42wn8xewnojn5",
-url: "https://openapi.etsy.com/v2/listings/active.js?"
+var EtsyCollection = Backbone.Collection.extend ({
+	_apiKey: "4qbvpiz0vok42wn8xewnojn5",
+	url: "https://openapi.etsy.com/v2/listings/active.js?",
+	model: EtsyModel,
+	parse: function(JSONData){
+		return JSONData.results
+	}
 })
 //need to add a detail Model here.
 
@@ -32,14 +46,14 @@ var EtsyHomeView = Backbone.View.extend({
 
 	el: "#container",
 
-	initialize: function(someModel) {
-	this.model = someModel	
+	initialize: function(collection) {
+	this.collection = collection	
 	console.log(this.model)
 	var newFunc = this._render.bind(this)
-	this.model.on("sync", newFunc)	
+	this.collection.on("sync", newFunc)	
 	},
 	events: {
-		"click img": "_triggerDetailView"
+		"click img.etsyHome": "_triggerDetailView"
 			},
 
 	_triggerDetailView: function(clickEvent) {
@@ -49,17 +63,16 @@ var EtsyHomeView = Backbone.View.extend({
 	},		
 			
 	_render: function(){
-		var dataArray = this.model.get("results")
-		console.log(this.model)
-		console.log(dataArray)
+		var dataArray = this.collection.models	
 		var itemUrlString = ""
 		console.log(dataArray[0])
 	for (var i = 0; i < 12; i++) {
 		var itemObj = dataArray[i]
-		console.log(itemObj.Images[0].url_570xN)
-		var itemId = itemObj.listing_id
-	console.log(itemObj.listing_id)	
-	itemUrlString += '<img class="etsyHome" listingId="' + itemId + '"src="' + itemObj.Images[0].url_570xN + '">'
+		// console.log(itemObj)
+		// console.log(itemObj.Images[0].url_570xN)
+		var itemId = itemObj.get('listing_id')
+	// console.log(itemObj.listing_id)	
+	itemUrlString += '<div class="itemBox"><img class="etsyHome" listingId="' + itemId + '"src="' + itemObj.attributes.Images[0].url_570xN + '">' + '<p>' + itemObj.attributes.description.substr(0, 140) + '...' + '</p></div>'
 	}	
 		this.el.innerHTML = itemUrlString
 
@@ -80,10 +93,10 @@ var EtsyDetailView = Backbone.View.extend ({
 
 _render: function() {
 
-	console.log(this.model.attributes.results)
-	var itemUrl = this.model.attributes.results.Images.url_570xN
+	console.log(this.model.attributes.results[0].Images[0].url_570xN)
+	itemUrl = this.model.attributes.results[0]
 
-	this.el.innerHTML = '<img class="etsyDetail" src="' + itemUrl + '"></img>'
+	this.el.innerHTML = '<div class="itemBox"><img class="etsyDetail" src="' + itemUrl.Images[0].url_570xN + '">' + '<p>' + itemUrl.description + '</p></div>'
 }	
 })
 
@@ -95,29 +108,30 @@ var EtsyRouter = Backbone.Router.extend ({
 	},
 
 	handleHomeView: function(){
-		var mod = new EtsyHomeModel()
-		var vew = new EtsyHomeView(mod)
+		var colleccion = new EtsyCollection()
+		var vew = new EtsyHomeView(colleccion)
 
-		mod.fetch({
+		colleccion.fetch({
 			contentType: "application/json",
 			dataType: "jsonp",
 			data:{
 				includes:"Images",
-				api_key: mod._apiKey,
+				api_key: colleccion._apiKey,
 				// callback:"?"
 			}
 		})
 	},
-	handleDetailView: function(itemId){
-		var singleModel = new EtsyDetailModel()
-		var detailView = new EtsyDetailView(singleModel)
-		singleModel.url += itemId
-		singleModel.fetch({
+	handleDetailView: function(id){
+		var dm = new EtsyModel()
+		dm._generate_URL(id)
+		var dv = new EtsyDetailView(dm)
+		// singleModel.url += id
+		dm.fetch({
 			contentType: "application/json",
 			dataType: "jsonp",
 			data:{
 				includes:"Images",
-				api_key: singleModel._apiKey
+				api_key: dm._apiKey
 				// callback: "?"
 			}
 		})
