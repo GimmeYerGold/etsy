@@ -13,6 +13,21 @@ body {
 }
 
 .itemBox {
-	width: 600px;
-	margin: auto;
+	width: 25%;
+	margin: auto 10px;
+	display: inline-block;
+	margin: 2%;
+	box-shadow: 10px 10px 10px grey;
+	padding: 1%;
+	border: 10px solid skyblue;
 }
+
+.etsyHome {
+	max-width: 100%;
+}
+
+.etsyDetail {
+	max-width: 100%;	
+}
+
+.searchBar {margin: auto 50%;}

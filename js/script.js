@@ -45,6 +45,7 @@ var EtsyCollection = Backbone.Collection.extend ({
 var EtsyHomeView = Backbone.View.extend({
 
 	el: "#container",
+	tagName: "input",
 
 	initialize: function(collection) {
 	this.collection = collection	
@@ -52,24 +53,34 @@ var EtsyHomeView = Backbone.View.extend({
 	var newFunc = this._render.bind(this)
 	this.collection.on("sync", newFunc)	
 	},
+
 	events: {
-		"click img.etsyHome": "_triggerDetailView"
+		"click img.etsyHome": "_triggerDetailView",
+		"keydown input":
+		"_searchEtsy"
+ 
 			},
 
+	_searchEtsy: function(keyEvent) {
+		var query = keyEvent.target.value
+		if(keyEvent.keyCode === 13){
+		location.hash = "search/" + query
+		}	
+	},		
+    
 	_triggerDetailView: function(clickEvent) {
 		var imageNode = clickEvent.target
 		location.hash = "detail/" + imageNode.getAttribute("listingid")
 		console.log(clickEvent.target)
-	},		
+	},				
 			
 	_render: function(){
 		var dataArray = this.collection.models	
-		var itemUrlString = ""
+		var itemUrlString = '<div class="searchBar"><input type="text" placeholder="Search"></div>'
 		console.log(dataArray[0])
 	for (var i = 0; i < 12; i++) {
 		var itemObj = dataArray[i]
-		// console.log(itemObj)
-		// console.log(itemObj.Images[0].url_570xN)
+		console.log(itemObj)
 		var itemId = itemObj.get('listing_id')
 	// console.log(itemObj.listing_id)	
 	itemUrlString += '<div class="itemBox"><img class="etsyHome" listingId="' + itemId + '"src="' + itemObj.attributes.Images[0].url_570xN + '">' + '<p>' + itemObj.attributes.description.substr(0, 140) + '...' + '</p></div>'
@@ -81,6 +92,8 @@ var EtsyHomeView = Backbone.View.extend({
 	}
 
 })
+
+
 
 var EtsyDetailView = Backbone.View.extend ({
 	el: "#container",
@@ -104,7 +117,8 @@ var EtsyRouter = Backbone.Router.extend ({
 
 	routes: {
 		"home/": "handleHomeView",
-		"detail/:id": "handleDetailView"
+		"detail/:id": "handleDetailView",
+		"search/:keyword": "handleSearchView"
 	},
 
 	handleHomeView: function(){
@@ -137,9 +151,26 @@ var EtsyRouter = Backbone.Router.extend ({
 		})
 
 	},
+	handleSearchView: function(query){
+		var colleccion = new EtsyCollection()
+		var vew = new EtsyHomeView(colleccion)
+
+		colleccion.fetch({
+			contentType: "application/json",
+			dataType: "jsonp",
+			data:{
+				includes:"Images",
+				api_key: colleccion._apiKey,
+				keywords: query
+			}
+		})
+	},
+
+
 	initialize: function() {
 		Backbone.history.start()
 	}
 })
+
 
 var rtr = new EtsyRouter()
